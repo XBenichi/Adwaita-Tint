@@ -1,0 +1,563 @@
+#!/usr/bin/env python3
+import subprocess
+import threading
+import time
+import os
+import sys
+
+THEME_NAME = "AdwaitaTint"
+THEME_DIR = os.path.expanduser(f"~/.local/share/themes/{THEME_NAME}/gnome-shell")
+CSS_PATH = os.path.join(THEME_DIR, "gnome-shell.css")
+
+ACCENT_COLORS = {
+    "blue":   (0x35, 0x84, 0xe4),
+    "teal":   (0x21, 0x90, 0xa4),
+    "green":  (0x3a, 0x94, 0x4a),
+    "yellow": (0xc8, 0x88, 0x00),
+    "orange": (0xed, 0x5b, 0x00),
+    "red":    (0xe6, 0x2d, 0x42),
+    "pink":   (0xd5, 0x61, 0x99),
+    "purple": (0x91, 0x41, 0xac),
+    "slate":  (0x6f, 0x83, 0x96),
+}
+
+
+# Color math
+
+def mix(base, accent, factor):
+    # same semantics as GTK's CSS mix()
+    return tuple(
+        round(b * (1 - factor) + a * factor)
+        for b, a in zip(base, accent)
+    )
+
+def darken(color, amount):
+    return tuple(max(0, c - amount) for c in color)
+
+def lighten(color, amount):
+    return tuple(min(255, c + amount) for c in color)
+
+def to_hex(color):
+    return "#{:02x}{:02x}{:02x}".format(*color)
+
+def luminance(color):
+    def chan(c):
+        c = c / 255
+        return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+    r, g, b = color
+    return 0.2126 * chan(r) + 0.7152 * chan(g) + 0.0722 * chan(b)
+
+def contrast_color(bg):
+    return "#ffffff" if luminance(bg) < 0.35 else "#1a1a1a"
+
+
+# Color palette calculation
+
+def compute_light(accent):
+    # Mirrors AdwTint light mode formulas
+    window_bg       = mix((0xfd, 0xf8, 0xf0), accent, 0.075)
+    headerbar       = mix((0xff, 0xff, 0xff), accent, 0.6)
+    headerbar_back  = mix((0xd8, 0xd8, 0xd8), accent, 0.15)
+    sidebar         = mix((0xf0, 0xe8, 0xd8), accent, 0.2)
+    sidebar_back    = mix((0xe0, 0xe0, 0xe0), accent, 0.1)
+
+    tile            = sidebar
+    tile_hover      = darken(tile, 8)
+    tile_active     = darken(tile, 16)
+    widget_bg       = sidebar
+    accent_btn      = headerbar
+    accent_btn_hov  = darken(accent_btn, 20)
+    text            = (0x1a, 0x1a, 0x1a)
+    subtext         = mix((0x6b, 0x50, 0x20), accent, 0.15)
+    btn_text        = contrast_color(accent_btn)
+
+    return {
+        "bg":              to_hex(window_bg),
+        "tile":            to_hex(tile),
+        "tile_hover":      to_hex(tile_hover),
+        "tile_active":     to_hex(tile_active),
+        "widget_bg":       to_hex(widget_bg),
+        "accent_btn":      to_hex(accent_btn),
+        "accent_btn_hov":  to_hex(accent_btn_hov),
+        "text":            to_hex(text),
+        "subtext":         to_hex(subtext),
+        "btn_text":        btn_text,
+        "is_dark":         False,
+    }
+
+def compute_dark(accent):
+    # Mirrors AdwTint dark mode formulas
+    window_bg       = mix((0x18, 0x16, 0x14), accent, 0.12)
+    headerbar       = mix((0x99, 0x99, 0x99), accent, 0.5)
+    headerbar_back  = mix((0x66, 0x66, 0x66), accent, 0.12)
+    sidebar         = mix((0x20, 0x1e, 0x1a), accent, 0.2)
+    sidebar_back    = mix((0x24, 0x24, 0x22), accent, 0.12)
+
+    tile            = sidebar
+    tile_hover      = lighten(tile, 10)
+    tile_active     = lighten(tile, 18)
+    widget_bg       = sidebar
+    accent_btn      = headerbar
+    accent_btn_hov  = darken(accent_btn, 20)
+    text            = (0xff, 0xff, 0xff)
+    subtext         = mix((0xb8, 0x98, 0x60), accent, 0.2)
+    btn_text        = contrast_color(accent_btn)
+
+    return {
+        "bg":              to_hex(window_bg),
+        "tile":            to_hex(tile),
+        "tile_hover":      to_hex(tile_hover),
+        "tile_active":     to_hex(tile_active),
+        "widget_bg":       to_hex(widget_bg),
+        "accent_btn":      to_hex(accent_btn),
+        "accent_btn_hov":  to_hex(accent_btn_hov),
+        "text":            to_hex(text),
+        "subtext":         to_hex(subtext),
+        "btn_text":        btn_text,
+        "is_dark":         True,
+    }
+
+
+def generate_css(c):
+    dark_overlay = "rgba(255,255,255,0.1)" if c["is_dark"] else "rgba(0,0,0,0.08)"
+    tile_border  = "rgba(255,255,255,0.15)" if c["is_dark"] else "rgba(0,0,0,0.08)"
+    msg_close_bg = "rgba(255,255,255,0.12)" if c["is_dark"] else "rgba(0,0,0,0.10)"
+    msg_close_hov= "rgba(255,255,255,0.20)" if c["is_dark"] else "rgba(0,0,0,0.18)"
+    notif_btn_bg = "rgba(255,255,255,0.12)" if c["is_dark"] else "rgba(0,0,0,0.10)"
+    notif_btn_hov= "rgba(255,255,255,0.20)" if c["is_dark"] else "rgba(0,0,0,0.18)"
+    sep_color    = "rgba(255,255,255,0.15)" if c["is_dark"] else "rgba(0,0,0,0.15)"
+    sep_checked  = "rgba(255,255,255,0.30)" if c["is_dark"] else "rgba(255,255,255,0.30)"
+    themed_icon  = "rgba(255,255,255,0.10)" if c["is_dark"] else "rgba(0,0,0,0.08)"
+    placeholder  = "rgba(255,255,255,0.40)" if c["is_dark"] else "rgba(26,26,26,0.45)"
+    collapse_bg  = "rgba(255,255,255,0.14)" if c["is_dark"] else "rgba(0,0,0,0.12)"
+    collapse_hov = "rgba(255,255,255,0.22)" if c["is_dark"] else "rgba(0,0,0,0.20)"
+
+    return f"""/* =============================================
+ * AdwTint GNOME Shell Theme. Auto-generated by adwaita-tint-watch
+ * ============================================= */
+
+/* --- Quick Settings --- */
+
+.quick-settings {{
+    background-color: {c["bg"]};
+}}
+
+.quick-settings .icon-button {{
+    background-color: {c["tile"]};
+    color: {c["text"]};
+}}
+.quick-settings .icon-button:hover {{
+    background-color: {c["tile_hover"]};
+    color: {c["text"]};
+}}
+.quick-settings .icon-button:active {{
+    background-color: {c["tile_active"]};
+    color: {c["text"]};
+}}
+
+.quick-toggle {{
+    background-color: {c["tile"]};
+    color: {c["text"]};
+}}
+.quick-toggle:hover {{
+    background-color: {c["tile_hover"]};
+    color: {c["text"]};
+}}
+.quick-toggle:active {{
+    background-color: {c["tile_active"]};
+    color: {c["text"]};
+}}
+.quick-toggle:checked {{
+    background-color: {c["accent_btn"]};
+    color: {c["btn_text"]};
+}}
+.quick-toggle:checked:hover {{
+    background-color: {c["accent_btn_hov"]};
+    color: {c["btn_text"]};
+}}
+
+.quick-toggle-has-menu .quick-toggle {{
+    background-color: {c["tile"]};
+    color: {c["text"]};
+}}
+.quick-toggle-has-menu .quick-toggle:hover {{
+    background-color: {c["tile_hover"]};
+    color: {c["text"]};
+}}
+.quick-toggle-has-menu .quick-toggle:checked {{
+    background-color: {c["accent_btn"]};
+    color: {c["btn_text"]};
+}}
+.quick-toggle-has-menu .quick-toggle:checked:hover {{
+    background-color: {c["accent_btn_hov"]};
+    color: {c["btn_text"]};
+}}
+
+.quick-toggle-has-menu .quick-toggle-menu-button {{
+    background-color: {c["tile"]};
+    color: {c["text"]};
+}}
+.quick-toggle-has-menu .quick-toggle-menu-button:hover {{
+    background-color: {c["tile_hover"]};
+    color: {c["text"]};
+}}
+.quick-toggle-has-menu .quick-toggle-menu-button:checked {{
+    background-color: {c["accent_btn"]};
+    color: {c["btn_text"]};
+}}
+.quick-toggle-has-menu .quick-toggle-menu-button:checked:hover {{
+    background-color: {c["accent_btn_hov"]};
+    color: {c["btn_text"]};
+}}
+
+.quick-toggle-has-menu .quick-toggle-separator {{
+    background-color: {sep_color};
+}}
+.quick-toggle-has-menu:checked .quick-toggle-separator {{
+    background-color: {sep_checked};
+}}
+
+.quick-toggle-menu {{
+    background-color: {c["bg"]};
+    color: {c["text"]};
+    border: 1px solid {tile_border};
+}}
+.quick-toggle-menu:hover {{
+    background-color: {c["tile"]};
+    color: {c["text"]};
+}}
+.quick-toggle-menu .header .icon {{
+    background-color: {dark_overlay};
+}}
+.quick-toggle-menu .header .icon.active {{
+    background-color: {c["accent_btn"]};
+    color: {c["btn_text"]};
+}}
+.quick-toggle-menu .popup-menu-item {{
+    color: {c["text"]};
+}}
+.quick-toggle-menu .popup-menu-item:hover,
+.quick-toggle-menu .popup-menu-item:selected {{
+    background-color: {c["tile"]};
+    color: {c["text"]};
+}}
+
+.quick-slider .slider-bin {{
+    background-color: {c["tile"]};
+}}
+.slider {{
+    color: {c["text"]};
+    -barlevel-background-color: {dark_overlay};
+    -barlevel-active-background-color: {c["accent_btn"]};
+}}
+
+.quick-settings-system-item .power-item {{
+    color: {c["text"]};
+    background-color: {c["tile"]};
+}}
+.quick-settings-system-item .power-item:hover {{
+    background-color: {c["tile_hover"]};
+}}
+
+/* --- Popup Menus --- */
+
+.popup-menu-content {{
+    background-color: {c["bg"]};
+    color: {c["text"]};
+    border: 1px solid {tile_border};
+}}
+.popup-inactive-menu-item {{
+    color: {c["text"]};
+}}
+.popup-menu-item {{
+    color: {c["text"]};
+}}
+.popup-menu-item:hover,
+.popup-menu-item:selected,
+.popup-menu-item:checked {{
+    background-color: {c["tile"]};
+    color: {c["text"]};
+}}
+.popup-menu-item:active {{
+    background-color: {c["tile_hover"]};
+    color: {c["text"]};
+}}
+.popup-sub-menu {{
+    background-color: {c["tile"]};
+}}
+.popup-sub-menu .popup-menu-item:hover,
+.popup-sub-menu .popup-menu-item:selected {{
+    background-color: {c["tile_hover"]};
+}}
+
+/* --- Date Menu & Calendar --- */
+
+.datemenu-today-button {{
+    background-color: transparent;
+    color: {c["text"]};
+}}
+.datemenu-today-button .date-label {{
+    color: {c["text"]};
+}}
+.datemenu-today-button:hover {{
+    background-color: {c["tile"]};
+}}
+
+.calendar {{
+    background-color: transparent;
+    color: {c["text"]};
+}}
+.calendar .calendar-month-header .calendar-month-label {{
+    background-color: transparent;
+    color: {c["text"]} !important;
+}}
+.calendar .calendar-month-header .calendar-month-label:hover {{
+    background-color: {c["tile"]};
+}}
+.calendar .calendar-month-header .pager-button {{
+    background-color: transparent;
+    color: {c["text"]};
+}}
+.calendar .calendar-month-header .pager-button:hover {{
+    background-color: {c["tile"]};
+    color: {c["text"]};
+}}
+.calendar .calendar-month-header .pager-button:active {{
+    background-color: {c["tile_hover"]};
+    color: {c["text"]};
+}}
+.calendar .calendar-day-heading {{
+    background-color: transparent;
+    color: {c["subtext"]};
+}}
+.calendar .calendar-day {{
+    background-color: transparent;
+    color: {c["text"]};
+}}
+.calendar .calendar-day:hover {{
+    background-color: {c["tile"]};
+    color: {c["text"]};
+}}
+.calendar .calendar-day:active {{
+    background-color: {c["tile_hover"]};
+    color: {c["text"]};
+}}
+.calendar .calendar-day.calendar-other-month {{
+    color: {placeholder};
+}}
+.calendar .calendar-day.calendar-today {{
+    background-color: {c["accent_btn"]};
+    color: {c["btn_text"]} !important;
+}}
+
+/* --- Events / Clocks / Weather --- */
+
+.events-button,
+.world-clocks-button,
+.weather-button {{
+    background-color: {c["widget_bg"]};
+    color: {c["text"]};
+    border: 1px solid {tile_border};
+}}
+.events-button:hover,
+.world-clocks-button:hover,
+.weather-button:hover {{
+    background-color: {c["tile"]};
+    color: {c["text"]};
+}}
+.events-button .events-box .events-title,
+.events-button .events-box .events-list .event-box .event-time,
+.events-button .events-box .events-list .event-placeholder {{
+    color: {c["subtext"]};
+}}
+.events-button .events-box .events-list .event-box .event-summary {{
+    color: {c["text"]};
+}}
+.world-clocks-button .world-clocks-header,
+.world-clocks-button .world-clocks-grid .world-clocks-timezone,
+.weather-button .weather-box .weather-header-box .weather-header {{
+    color: {c["subtext"]};
+}}
+.world-clocks-button .world-clocks-grid .world-clocks-time,
+.weather-button .weather-box .weather-grid .weather-forecast-temp {{
+    color: {c["text"]};
+}}
+
+/* --- Notifications --- */
+
+.message-list-controls .button,
+.message-list-controls .message-list-clear-button {{
+    background-color: {c["tile"]};
+    color: {c["text"]};
+}}
+.message-list-controls .button:hover,
+.message-list-controls .message-list-clear-button:hover {{
+    background-color: {c["tile_hover"]};
+    color: {c["text"]};
+}}
+.message-list-controls .button:active,
+.message-list-controls .message-list-clear-button:active {{
+    background-color: {c["tile_active"]};
+    color: {c["text"]};
+}}
+
+.message {{
+    background-color: {c["widget_bg"]};
+    color: {c["text"]};
+    border: 1px solid {tile_border};
+}}
+.message:second-in-stack {{
+    background-color: {c["tile"]};
+}}
+.message:lower-in-stack {{
+    background-color: {c["tile_hover"]};
+}}
+.message .message-header {{
+    color: {c["text"]};
+}}
+.message .message-header .message-header-content .message-source-title {{
+    color: {c["text"]};
+}}
+.message .message-header .message-header-content .event-time {{
+    color: {c["subtext"]};
+}}
+.message .message-header .message-expand-button,
+.message .message-header .message-close-button {{
+    color: {c["text"]};
+    background-color: {msg_close_bg};
+}}
+.message .message-header .message-expand-button:hover,
+.message .message-header .message-close-button:hover {{
+    background-color: {msg_close_hov};
+    color: {c["text"]};
+}}
+.message .message-box .message-content .message-title {{
+    color: {c["text"]};
+}}
+.message .message-box .message-icon.message-themed-icon {{
+    background-color: {themed_icon};
+}}
+
+.notification-button {{
+    color: {c["text"]};
+    background-color: {notif_btn_bg};
+}}
+.notification-button:hover {{
+    color: {c["text"]};
+    background-color: {notif_btn_hov};
+}}
+.notification-button:active {{
+    color: {c["text"]};
+    background-color: {notif_btn_hov};
+}}
+
+.notification-banner {{
+    background-color: {c["widget_bg"]};
+    color: {c["text"]};
+    border: 1px solid {tile_border};
+}}
+
+.message-media-control {{
+    color: {c["text"]};
+}}
+.message-media-control:hover {{
+    background-color: {c["tile_hover"]};
+    color: {c["text"]};
+}}
+
+.message-list {{
+    border-color: {tile_border};
+}}
+.message-list .message-list-placeholder {{
+    color: {placeholder};
+}}
+
+.message-notification-group .message-collapse-button {{
+    color: {c["text"]};
+    background-color: {collapse_bg};
+}}
+.message-notification-group .message-collapse-button:hover {{
+    background-color: {collapse_hov};
+}}
+"""
+
+
+# gsettings helpers
+
+def get_setting(schema, key):
+    result = subprocess.run(
+        ["gsettings", "get", schema, key],
+        capture_output=True, text=True
+    )
+    return result.stdout.strip().strip("'")
+
+def reload_theme():
+    # I've noticed GNOME needs a more aggressive flick to clear the cache.
+    # I set it to a dummy value and then back to the theme.
+    try:
+        # dconf to bypass BS errors
+        os.system("dconf write /org/gnome/shell/extensions/user-theme/name \"''\"")
+        time.sleep(0.3)
+        os.system(f"dconf write /org/gnome/shell/extensions/user-theme/name \"'{THEME_NAME}'\"")
+        
+        # Force a soft refresh signal via DBus
+        os.system("dbus-send --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:'Main.loadTheme();' > /dev/null 2>&1")
+        
+        print(f"[adwaita-tint] Refresh signaled to GNOME Shell")
+    except Exception as e:
+        print(f"[adwaita-tint] Reload failed: {e}")
+
+
+
+def update_theme():
+    accent_name  = get_setting("org.gnome.desktop.interface", "accent-color")
+    color_scheme = get_setting("org.gnome.desktop.interface", "color-scheme")
+
+    accent = ACCENT_COLORS.get(accent_name, ACCENT_COLORS["yellow"])
+    is_dark = "dark" in color_scheme.lower()
+
+    palette = compute_dark(accent) if is_dark else compute_light(accent)
+    css = generate_css(palette)
+
+    os.makedirs(THEME_DIR, exist_ok=True)
+    with open(CSS_PATH, "w") as f:
+        f.write(css)
+
+    reload_theme()
+    print(f"[adwaita-tint] Updated: accent={accent_name} mode={'dark' if is_dark else 'light'}")
+
+
+# Watcher
+
+def watch_setting(schema, key, callback):
+    proc = subprocess.Popen(
+        ["gsettings", "monitor", schema, key],
+        stdout=subprocess.PIPE, text=True
+    )
+    for line in proc.stdout:
+        if key in line:
+            callback()
+
+def main():
+    # Apply immediately on start
+    update_theme()
+
+    # Watch both settings in background threads
+    for key in ("accent-color", "color-scheme"):
+        t = threading.Thread(
+            target=watch_setting,
+            args=("org.gnome.desktop.interface", key, update_theme),
+            daemon=True
+        )
+        t.start()
+
+    print("[adwaita-tint] Watching for changes. Press Ctrl+C to stop.")
+    try:
+        while True:
+            time.sleep(60)
+    except KeyboardInterrupt:
+        print("[adwaita-tint] Stopped.")
+        sys.exit(0)
+
+if __name__ == "__main__":
+    main()

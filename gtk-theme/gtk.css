@@ -1,0 +1,248 @@
+/* Light mode */
+@media (prefers-color-scheme: light) {
+    /* Base Variables */
+    @define-color window_bg_color mix(#fdf8f0, @accent_bg_color, 0.075);
+    @define-color view_bg_color mix(#fffcf5, @accent_bg_color, 0.075);
+    @define-color headerbar_bg_color mix(#ffffff, @accent_bg_color, 0.6);
+    @define-color headerbar_backdrop_color mix(#d8d8d8, @accent_bg_color, 0.15);
+    @define-color popover_bg_color mix(#ffffff, @accent_bg_color, 0.075);
+    @define-color dialog_bg_color mix(#fafafb, @accent_bg_color, 0.075);
+    @define-color card_bg_color mix(#ffffff, @accent_bg_color, 0.04);
+    @define-color sidebar_bg_color mix(#f0e8d8, @accent_bg_color, 0.2);
+    @define-color sidebar_backdrop_color mix(#e0e0e0, @accent_bg_color, 0.1);
+    @define-color sidebar_border_color mix(rgba(0, 0, 6, 0.07), @accent_bg_color, 0.075);
+    @define-color secondary_sidebar_bg_color mix(#f0e8d8, @accent_bg_color, 0.15);
+    @define-color secondary_sidebar_backdrop_color mix(#e0e0e0, @accent_bg_color, 0.08);
+    @define-color secondary_sidebar_border_color mix(rgba(0, 0, 0, 0.07), @accent_bg_color, 0.075);
+
+    /* Specific Element Overrides */
+    @define-color panel_bg_color @window_bg_color;
+    @define-color panel_button_bg_color transparent;
+    @define-color panel_hover_bg_color @card_bg_color;
+
+    @define-color theme_bg_color @window_bg_color;
+    @define-color theme_base_color @view_bg_color;
+    @define-color theme_selected_bg_color @accent_bg_color;
+
+    @define-color text_color #2b2c30;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+    /* Base Variables */
+    @define-color window_bg_color mix(#181614, @accent_bg_color, 0.12);
+    @define-color view_bg_color mix(#121210, @accent_bg_color, 0.12);
+    @define-color headerbar_bg_color mix(#999999, @accent_bg_color, 0.5);
+    @define-color headerbar_backdrop_color mix(#666666, @accent_bg_color, 0.12);
+    @define-color popover_bg_color mix(#2e2c2a, @accent_bg_color, 0.12);
+    @define-color dialog_bg_color mix(#2a2826, @accent_bg_color, 0.12);
+    @define-color card_bg_color mix(rgba(255, 255, 255, 0.08), @accent_bg_color, 0.08);
+    @define-color sidebar_bg_color mix(#201e1a, @accent_bg_color, 0.2);
+    @define-color sidebar_backdrop_color mix(#242422, @accent_bg_color, 0.12);
+    @define-color sidebar_border_color mix(rgba(0, 0, 0, 0.36), @accent_bg_color, 0.05);
+    @define-color secondary_sidebar_bg_color mix(#1e1c1a, @accent_bg_color, 0.18);
+    @define-color secondary_sidebar_backdrop_color mix(#222220, @accent_bg_color, 0.1);
+    @define-color secondary_sidebar_border_color mix(rgba(0, 0, 0, 0.25), @accent_bg_color, 0.05);
+
+    /* Specific Element Overrides */
+    @define-color panel_bg_color @window_bg_color;
+    @define-color panel_button_bg_color transparent;
+    @define-color panel_hover_bg_color @card_bg_color;
+
+    @define-color theme_bg_color @window_bg_color;
+    @define-color theme_base_color @view_bg_color;
+    @define-color theme_selected_bg_color @accent_bg_color;
+
+    @define-color text_color #F6F6F6;
+}
+
+
+/* Element Styling Rules */
+toast {
+  background-color: mix(#505053, @accent_bg_color, 0.05);
+  color: #ffffff;
+}
+
+toggle:checked {
+  background-color: @card_bg_color;
+}
+
+.inline {
+  background-color: rgba(0, 0, 0, 0);
+}
+
+window.csd:backdrop {
+  transition: box-shadow 75ms cubic-bezier(0, 0, 0.2, 1);
+  box-shadow: 0 8px 6px -5px rgba(0, 0, 0, 0.2), 0 16px 15px 2px rgba(0, 0, 0, 0.14), 0 6px 18px 5px rgba(0, 0, 0, 0.12), 0 0 0 2px transparent, 0 0 36px transparent;
+}
+
+window.csd, window.solid-csd, dialog .background {
+  transition: none;
+  box-shadow: 0 8px 6px -5px rgba(0, 0, 0, 0.2), 0 16px 15px 2px rgba(0, 0, 0, 0.14), 0 6px 18px 5px rgba(0, 0, 0, 0.12), 0 0 0 2px @headerbar_bg_color, 0 0 36px transparent;
+}
+
+window {
+    border-bottom-left-radius: 0px;
+    border-bottom-right-radius: 0px;
+}
+
+/* Hover and selection states */
+row:hover {
+  background-color: mix(rgba(0,0,0,0), @accent_bg_color, 0.08);
+  box-shadow: none;
+}
+
+row:selected,
+row:selected:hover {
+  background-color: mix(rgba(0,0,0,0), @accent_bg_color, 0.25);
+}
+
+
+/* Above but for sidebars specifically */
+.sidebar row:hover {
+  background-color: mix(rgba(0,0,0,0), @accent_bg_color, 0.10);
+}
+.sidebar row:selected,
+.sidebar row:selected:hover {
+  background-color: mix(rgba(0,0,0,0), @accent_bg_color, 0.28);
+}
+
+/* Grid view */
+gridview > child:hover {
+  background-color: mix(rgba(0,0,0,0), @accent_bg_color, 0.08);
+}
+gridview > child:selected,
+gridview > child:selected:hover {
+  background-color: mix(rgba(0,0,0,0), @accent_bg_color, 0.25);
+}
+
+.nautilus-grid-view > child:hover {
+  background-color: mix(rgba(0,0,0,0), @accent_bg_color, 0.08);
+}
+.nautilus-grid-view > child:selected,
+.nautilus-grid-view > child:selected:hover {
+  background-color: mix(rgba(0,0,0,0), @accent_bg_color, 0.25);
+}
+
+
+/* Alternating BG color for lists a-la a certain non-Linux program ;-) */
+
+listview > row:nth-child(odd) {
+  background-color: mix(rgba(0,0,0,0), @accent_bg_color, 0.06);
+}
+
+listview > row:nth-child(even) {
+  background-color: transparent;
+}
+
+listview > row:nth-child(odd):hover,
+listview > row:nth-child(even):hover {
+  background-color: mix(rgba(0,0,0,0), @accent_bg_color, 0.12);
+}
+
+listview > row:nth-child(odd):selected,
+listview > row:nth-child(odd):selected:hover,
+listview > row:nth-child(even):selected,
+listview > row:nth-child(even):selected:hover {
+  background-color: mix(rgba(0,0,0,0), @accent_bg_color, 0.25);
+}
+
+/* Button states */
+
+button:active {
+  background-color: mix(@accent_bg_color, currentColor, 0.08);
+  transform: translateY(1px);
+  transition: transform 80ms ease, background-color 80ms ease;
+}
+
+button.suggested-action:active {
+  filter: brightness(0.88);
+  transform: translateY(1px);
+}
+
+button.destructive-action:active {
+  filter: brightness(0.88);
+  transform: translateY(1px);
+}
+
+popover entry:focus,
+popover text:focus {
+  background-color: transparent;
+}
+
+dialog.background {
+  box-shadow: 0 8px 32px 0 rgba(0,0,0,0.22), 0 2px 8px 0 rgba(0,0,0,0.12);
+}
+
+
+checkbutton > check,
+radiobutton > radio {
+  border-color: mix(@accent_bg_color, rgba(0,0,0,0.25), 0.35);
+  transition: border-color 150ms ease;
+}
+
+checkbutton > check:hover,
+radiobutton > radio:hover {
+  border-color: mix(@accent_bg_color, rgba(0,0,0,0.35), 0.5);
+}
+
+checkbutton > check:checked,
+radiobutton > radio:checked {
+  background-color: @accent_bg_color;
+  border-color: @accent_bg_color;
+}
+
+entry {
+  box-shadow: inset 0 1px 3px 0 rgba(0,0,0,0.08);
+}
+
+entry:focus {
+  box-shadow: inset 0 1px 3px 0 rgba(0,0,0,0.08),
+              inset 0 0 0 1px mix(@accent_bg_color, rgba(0,0,0,0), 0.25);
+}
+
+textview.view {
+  box-shadow: inset 0 1px 4px 0 rgba(0,0,0,0.06);
+}
+
+
+/* No idea where banners are used anywhere else but the Nautlius trash page uses it */
+
+banner widget {
+	background-color: @sidebar_bg_color;
+}
+
+banner widget:backdrop {
+	background-color: @sidebar_backdrop_color;
+}
+
+/* Font styling */
+
+.title-1 { font-weight: 600; font-size: 1.1em; }
+.caption { font-weight: 400; opacity: 0.6; font-size: 0.85em; }
+
+/* All of this below is for the nautilus-my-computer extenstion */
+
+widget paned scrolledwindow viewport list > row:nth-child(even) {
+  background-color: transparent;
+}
+
+widget paned scrolledwindow viewport list > row:nth-child(odd) {
+  background-color: mix(rgba(0,0,0,0), @accent_bg_color, 0.06);
+}
+
+widget paned scrolledwindow viewport list > row:nth-child(odd):hover,
+widget paned scrolledwindow viewport list > row:nth-child(even):hover {
+  background-color: mix(rgba(0,0,0,0), @accent_bg_color, 0.12);
+}
+
+widget paned scrolledwindow viewport list > row:nth-child(odd):selected,
+widget paned scrolledwindow viewport list > row:nth-child(odd):selected:hover,
+widget paned scrolledwindow viewport list > row:nth-child(even):selected,
+widget paned scrolledwindow viewport list > row:nth-child(even):selected:hover {
+  background-color: mix(rgba(0,0,0,0), @accent_bg_color, 0.25);
+}
+
+widget paned scrolledwindow viewport list row:selected box label  {
+	color: @text_color;
+}
