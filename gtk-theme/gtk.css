@@ -147,6 +147,14 @@ listview > row:nth-child(even):selected:hover {
   background-color: mix(rgba(0,0,0,0), @accent_bg_color, 0.25);
 }
 
+listview > row:nth-child(odd):backdrop {
+  background-color: mix(rgba(0,0,0,0), @accent_bg_color, 0.04);
+}
+
+listview > row:nth-child(even):backdrop {
+  background-color: transparent;
+}
+
 /* Button states */
 
 button:active {
@@ -245,4 +253,12 @@ widget paned scrolledwindow viewport list > row:nth-child(even):selected:hover {
 
 widget paned scrolledwindow viewport list row:selected box label  {
 	color: @text_color;
+}
+
+widget paned scrolledwindow viewport list > row:nth-child(odd):backdrop {
+  background-color: mix(rgba(0,0,0,0), @accent_bg_color, 0.04);
+}
+
+widget paned scrolledwindow viewport list > row:nth-child(even):backdrop {
+  background-color: transparent;
 }
