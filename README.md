@@ -13,6 +13,9 @@ A minimal GTK4 theme that tints the UI and Shell based on the accent color and d
 - Auto Accent Colour Extension for automatic accent color changes based on the wallpaper (https://extensions.gnome.org/extension/7502/auto-accent-colour/)
 
 ## Installation
+
+IMPORTANT! Make sure to back up your existing gtk-4.0 theme if you have one before you run this, as the process will override what's in `~/.config/gtk-4.0`
+
 ```bash
 chmod +x install.sh
 ./install.sh
