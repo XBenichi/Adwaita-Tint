@@ -5,12 +5,12 @@ A minimal GTK4 theme that tints the UI and Shell based on the accent color and d
 
 ## Requirements
 - GNOME 47 or higher
-- User Themes Extension (`https://extensions.gnome.org/extension/19/user-themes/`)
+- User Themes Extension (https://extensions.gnome.org/extension/19/user-themes/)
 - Python 3
 
 ## Optional, but Recommended
-- Accent Icons Extension for accent-adapting icon colors (`https://extensions.gnome.org/extension/7535/accent-directories/`)
-- Auto Accent Colour Extension for automatic accent color changes based on the wallpaper (`https://extensions.gnome.org/extension/7502/auto-accent-colour/`)
+- Accent Icons Extension for accent-adapting icon colors (https://extensions.gnome.org/extension/7535/accent-directories/)
+- Auto Accent Colour Extension for automatic accent color changes based on the wallpaper (https://extensions.gnome.org/extension/7502/auto-accent-colour/)
 
 ## Installation
 ```bash
