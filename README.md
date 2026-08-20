@@ -1,4 +1,5 @@
 # Adwaita Tint
+![preview](https://github.com/XBenichi/Adwaita-Tint/blob/main/rubbishExample.png?raw=true "Preview")
 A minimal GTK4 theme that tints the UI and Shell based on the accent color and dark/light mode, making it more pleasing and lively while retaining libadwaita's visual identity.
 
 
